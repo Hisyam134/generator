@@ -6,23 +6,88 @@
     <title>Web 1: Generator Kode Riwayat</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #eef2f3; }
-        .box { max-width: 450px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        button { padding: 15px 25px; font-size: 1.2rem; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px;}
+        /* Mengatur tema tampilan gelap seperti pada gambar sampel */
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin-top: 50px; 
+            background: #1a1a1a; 
+            color: #ffffff;
+        }
+        .box { 
+            max-width: 450px; 
+            margin: 0 auto; 
+            background: #222222; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+        }
+        button { 
+            padding: 12px 20px; 
+            font-size: 1rem; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin-top: 25px;
+        }
         button:hover { background: #0056b3; }
-        /* Menggunakan font-size lebih kecil & word-break agar teks alfanumerik yang panjang tidak luber */
-        #kode-output { font-size: 2.2rem; font-weight: bold; margin: 10px 0; color: #333; letter-spacing: 2px; word-break: break-all; }
-        .qrcode-container { margin: 20px 0; display: flex; justify-content: center; align-items: center; min-height: 150px; }
-        .status { color: #28a745; font-size: 0.9rem; }
+        
+        /* Wadah utama QR dan Teks agar tersusun vertikal ke bawah */
+        .qr-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .qrcode-container { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 160px; 
+        }
+
+        /* CSS QR Code agar transparan dan mengikuti filter tema HP */
+        #qrcode {
+            background-color: transparent !important; 
+            padding: 10px !important;              
+            display: inline-block !important;
+        }
+        #qrcode img, #qrcode canvas {
+            background-color: transparent !important; 
+            filter: invert(1) contrast(2); /* Membuat pola QR berwarna terang/putih di latar gelap */
+        }
+
+        /* Mengatur teks kode unik berada di bawah, berukuran kecil, dan agak renggang */
+        #kode-output { 
+            font-size: 1.2rem; /* Ukuran teks dibuat lebih kecil */
+            font-weight: bold; 
+            margin-top: 15px; /* Jarak aman di bawah QR Code */
+            color: #e0e0e0; 
+            letter-spacing: 1px; 
+            word-break: break-all; 
+        }
+        
+        .status { color: #28a745; font-size: 0.9rem; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="box">
     <h2>Web 1: Generator (Sistem Riwayat)</h2>
-    <p>Pencet tombol untuk membuat angka acak & QR Code baru:</p>
-    <div id="kode-output">-----</div>
-    <div class="qrcode-container"><div id="qrcode"></div></div>
+    <p style="color: #aaa;">Pencet tombol untuk membuat kode alfanumerik & QR Code baru:</p>
+    
+    <div class="qr-wrapper">
+        <div class="qrcode-container">
+            <div id="qrcode"></div>
+        </div>
+        <div id="kode-output">-----</div>
+    </div>
+
     <button onclick="generateDanKirim()">🎲 Buat & Kirim Kode</button>
     <p id="status-kirim" class="status"></p>
 </div>
@@ -35,9 +100,15 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    let qrcodeInstance = new QRCode(document.getElementById("qrcode"), { width: 150, height: 150 });
+    // Inisialisasi QR Code dengan background transparan
+    let qrcodeInstance = new QRCode(document.getElementById("qrcode"), { 
+        width: 160, 
+        height: 160,
+        colorDark : "#000000", 
+        colorLight : "rgba(0,0,0,0)"
+    });
 
-    // FUNGSI BARU: Membuat string acak (Kombinasi Huruf Kapital, Kecil, dan Angka)
+    // Fungsi membuat kombinasi huruf dan angka tanpa simbol
     function buatStringAcak(panjang) {
         const karakter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let hasil = '';
@@ -48,29 +119,26 @@
     }
 
     window.generateDanKirim = function() {
-        // Pembuatan komponen kode
-        const awalan = buatStringAcak(4);
-        const angkaTengah = Math.floor(10000 + Math.random() * 90000).toString(); // 5 digit angka asli
-        const akhiran = buatStringAcak(4);
+        const awalan = buatStringAcak(5);
+        const angkaTengah = Math.floor(10000 + Math.random() * 90000).toString(); 
+        const akhiran = buatStringAcak(5);
         
-        // Menggabungkan menjadi format Alfanumerik (Contoh hasil: aB7x-58291-9ZpQ)
-        const kodeGabungan = `${awalan}-${angkaTengah}-${akhiran}`;
+        // Penggabungan langsung tanpa tanda strip/simbol apa pun
+        const kodeGabungan = `${awalan}${angkaTengah}${akhiran}`;
 
+        // Memasukkan data ke QR Code dan teks di bawahnya
         document.getElementById('kode-output').innerText = kodeGabungan;
         qrcodeInstance.makeCode(kodeGabungan);
         document.getElementById('status-kirim').innerText = "Menyimpan...";
 
-        // 1. Simpan kode baru ke jalur 'sistem/riwayat_kode' menggunakan push()
         const riwayatRef = ref(database, 'sistem/riwayat_kode');
         const dataBaruRef = push(riwayatRef);
         
         set(dataBaruRef, {
-            angka: kodeGabungan, // Sekarang yang dikirim ke Firebase adalah kode kombinasi rumit
+            angka: kodeGabungan, 
             timestamp: Date.now()
         }).then(() => {
             document.getElementById('status-kirim').innerText = "✅ Kode disimpan ke riwayat!";
-            
-            // 2. Pembersihan otomatis: Hapus data lama jika sudah lebih dari 150
             jalankanPembersihanOtomatis();
         });
     }
