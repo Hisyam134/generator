@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web 2: Monitor Display QR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #eef2f3; }
+        .box { max-width: 450px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #kode-output { font-size: 3rem; font-weight: bold; margin: 10px 0; color: #007bff; letter-spacing: 3px; }
+        .qrcode-container { margin: 20px 0; display: flex; justify-content: center; align-items: center; min-height: 150px; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Web 2: QR Code Monitor</h2>
+    <p>Menampilkan QR Code terbaru dari sistem:</p>
+    <div id="kode-output">-----</div>
+    <div class="qrcode-container"><div id="qrcode"></div></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = { databaseURL: "https://tiketcom-5d185-default-rtdb.asia-southeast1.firebasedatabase.app/" };
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    let qrcodeInstance = new QRCode(document.getElementById("qrcode"), { width: 180, height: 180 });
+
+    // Hanya ambil 1 data terakhir yang masuk ke riwayat untuk ditampilkan di layar
+    const q = query(ref(database, 'sistem/riwayat_kode'), limitToLast(1));
+    onValue(q, (snapshot) => {
+        if (snapshot.exists()) {
+            snapshot.forEach((childSnapshot) => {
+                const data = childSnapshot.val();
+                document.getElementById('kode-output').innerText = data.angka;
+                qrcodeInstance.makeCode(data.angka);
+            });
+        }
+    });
+</script>
+</body>
+</html>
