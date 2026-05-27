@@ -10,7 +10,8 @@
         .box { max-width: 450px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         button { padding: 15px 25px; font-size: 1.2rem; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px;}
         button:hover { background: #0056b3; }
-        #kode-output { font-size: 2.5rem; font-weight: bold; margin: 10px 0; color: #333; letter-spacing: 3px; }
+        /* Menggunakan font-size lebih kecil & word-break agar teks alfanumerik yang panjang tidak luber */
+        #kode-output { font-size: 2.2rem; font-weight: bold; margin: 10px 0; color: #333; letter-spacing: 2px; word-break: break-all; }
         .qrcode-container { margin: 20px 0; display: flex; justify-content: center; align-items: center; min-height: 150px; }
         .status { color: #28a745; font-size: 0.9rem; }
     </style>
@@ -28,7 +29,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, push, set, get, query, orderByKey, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = { databaseURL: "https://tiketcom-5d185-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     const app = initializeApp(firebaseConfig);
@@ -36,18 +37,35 @@
 
     let qrcodeInstance = new QRCode(document.getElementById("qrcode"), { width: 150, height: 150 });
 
+    // FUNGSI BARU: Membuat string acak (Kombinasi Huruf Kapital, Kecil, dan Angka)
+    function buatStringAcak(panjang) {
+        const karakter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let hasil = '';
+        for (let i = 0; i < panjang; i++) {
+            hasil += karakter.charAt(Math.floor(Math.random() * karakter.length));
+        }
+        return hasil;
+    }
+
     window.generateDanKirim = function() {
-        const angkaAcak = Math.floor(10000 + Math.random() * 90000).toString();
-        document.getElementById('kode-output').innerText = angkaAcak;
-        qrcodeInstance.makeCode(angkaAcak);
+        // Pembuatan komponen kode
+        const awalan = buatStringAcak(4);
+        const angkaTengah = Math.floor(10000 + Math.random() * 90000).toString(); // 5 digit angka asli
+        const akhiran = buatStringAcak(4);
+        
+        // Menggabungkan menjadi format Alfanumerik (Contoh hasil: aB7x-58291-9ZpQ)
+        const kodeGabungan = `${awalan}-${angkaTengah}-${akhiran}`;
+
+        document.getElementById('kode-output').innerText = kodeGabungan;
+        qrcodeInstance.makeCode(kodeGabungan);
         document.getElementById('status-kirim').innerText = "Menyimpan...";
 
-        // 1. Simpan kode baru ke jalur 'sistem/riwayat_kode' menggunakan push() agar punya ID unik
+        // 1. Simpan kode baru ke jalur 'sistem/riwayat_kode' menggunakan push()
         const riwayatRef = ref(database, 'sistem/riwayat_kode');
         const dataBaruRef = push(riwayatRef);
         
         set(dataBaruRef, {
-            angka: angkaAcak,
+            angka: kodeGabungan, // Sekarang yang dikirim ke Firebase adalah kode kombinasi rumit
             timestamp: Date.now()
         }).then(() => {
             document.getElementById('status-kirim').innerText = "✅ Kode disimpan ke riwayat!";
@@ -59,16 +77,13 @@
 
     function jalankanPembersihanOtomatis() {
         const riwayatRef = ref(database, 'sistem/riwayat_kode');
-        // Ambil data keseluruhan
         get(riwayatRef).then((snapshot) => {
             if (snapshot.exists()) {
                 const semuaData = snapshot.val();
-                const kunciData = Object.keys(semuaData); // List semua ID unik
+                const kunciData = Object.keys(semuaData);
                 
-                // Jika total kode terdaftar sudah melebihi 150
                 if (kunciData.length > 150) {
                     const jumlahYangDihapus = kunciData.length - 150;
-                    // Hapus dari yang paling lama (index awal)
                     for (let i = 0; i < jumlahYangDihapus; i++) {
                         set(ref(database, 'sistem/riwayat_kode/' + kunciData[i]), null);
                     }
